@@ -41,3 +41,8 @@ __pycache__
 
 # Env files
 .env
+
+# Eclipse
+.project
+.pydevproject
+.settings/
