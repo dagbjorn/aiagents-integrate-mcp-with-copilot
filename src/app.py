@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
+from typing import Optional
+from fastapi import Body
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -25,55 +27,66 @@ activities = {
         "description": "Learn strategies and compete in chess tournaments",
         "schedule": "Fridays, 3:30 PM - 5:00 PM",
         "max_participants": 12,
-        "participants": ["michael@mergington.edu", "daniel@mergington.edu"]
+        "participants": ["michael@mergington.edu", "daniel@mergington.edu"],
+        "content": [
+            {"type": "text", "title": "Welcome", "body": "Join us for chess every Friday!"}
+        ]
     },
     "Programming Class": {
         "description": "Learn programming fundamentals and build software projects",
         "schedule": "Tuesdays and Thursdays, 3:30 PM - 4:30 PM",
         "max_participants": 20,
-        "participants": ["emma@mergington.edu", "sophia@mergington.edu"]
+        "participants": ["emma@mergington.edu", "sophia@mergington.edu"],
+        "content": []
     },
     "Gym Class": {
         "description": "Physical education and sports activities",
         "schedule": "Mondays, Wednesdays, Fridays, 2:00 PM - 3:00 PM",
         "max_participants": 30,
-        "participants": ["john@mergington.edu", "olivia@mergington.edu"]
+        "participants": ["john@mergington.edu", "olivia@mergington.edu"],
+        "content": []
     },
     "Soccer Team": {
         "description": "Join the school soccer team and compete in matches",
         "schedule": "Tuesdays and Thursdays, 4:00 PM - 5:30 PM",
         "max_participants": 22,
-        "participants": ["liam@mergington.edu", "noah@mergington.edu"]
+        "participants": ["liam@mergington.edu", "noah@mergington.edu"],
+        "content": []
     },
     "Basketball Team": {
         "description": "Practice and play basketball with the school team",
         "schedule": "Wednesdays and Fridays, 3:30 PM - 5:00 PM",
         "max_participants": 15,
-        "participants": ["ava@mergington.edu", "mia@mergington.edu"]
+        "participants": ["ava@mergington.edu", "mia@mergington.edu"],
+        "content": []
     },
     "Art Club": {
         "description": "Explore your creativity through painting and drawing",
         "schedule": "Thursdays, 3:30 PM - 5:00 PM",
         "max_participants": 15,
-        "participants": ["amelia@mergington.edu", "harper@mergington.edu"]
+        "participants": ["amelia@mergington.edu", "harper@mergington.edu"],
+        "content": []
     },
     "Drama Club": {
         "description": "Act, direct, and produce plays and performances",
         "schedule": "Mondays and Wednesdays, 4:00 PM - 5:30 PM",
         "max_participants": 20,
-        "participants": ["ella@mergington.edu", "scarlett@mergington.edu"]
+        "participants": ["ella@mergington.edu", "scarlett@mergington.edu"],
+        "content": []
     },
     "Math Club": {
         "description": "Solve challenging problems and participate in math competitions",
         "schedule": "Tuesdays, 3:30 PM - 4:30 PM",
         "max_participants": 10,
-        "participants": ["james@mergington.edu", "benjamin@mergington.edu"]
+        "participants": ["james@mergington.edu", "benjamin@mergington.edu"],
+        "content": []
     },
     "Debate Team": {
         "description": "Develop public speaking and argumentation skills",
         "schedule": "Fridays, 4:00 PM - 5:30 PM",
         "max_participants": 12,
-        "participants": ["charlotte@mergington.edu", "henry@mergington.edu"]
+        "participants": ["charlotte@mergington.edu", "henry@mergington.edu"],
+        "content": []
     }
 }
 
@@ -130,3 +143,42 @@ def unregister_from_activity(activity_name: str, email: str):
     # Remove student
     activity["participants"].remove(email)
     return {"message": f"Unregistered {email} from {activity_name}"}
+
+
+@app.get("/activities/{activity_name}/content")
+def get_activity_content(activity_name: str):
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return activities[activity_name]["content"]
+
+
+@app.post("/activities/{activity_name}/content")
+def add_activity_content(activity_name: str, content: dict = Body(...)):
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    if "type" not in content or content["type"] not in ["text", "link", "image", "video"]:
+        raise HTTPException(status_code=400, detail="Content type must be one of: text, link, image, video")
+    activities[activity_name]["content"].append(content)
+    return {"message": f"Content added to {activity_name}", "content": content}
+
+
+@app.put("/activities/{activity_name}/content/{content_idx}")
+def update_activity_content(activity_name: str, content_idx: int, content: dict = Body(...)):
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    if content_idx < 0 or content_idx >= len(activities[activity_name]["content"]):
+        raise HTTPException(status_code=404, detail="Content not found")
+    if "type" not in content or content["type"] not in ["text", "link", "image", "video"]:
+        raise HTTPException(status_code=400, detail="Content type must be one of: text, link, image, video")
+    activities[activity_name]["content"][content_idx] = content
+    return {"message": f"Content updated for {activity_name}", "content": content}
+
+
+@app.delete("/activities/{activity_name}/content/{content_idx}")
+def delete_activity_content(activity_name: str, content_idx: int):
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    if content_idx < 0 or content_idx >= len(activities[activity_name]["content"]):
+        raise HTTPException(status_code=404, detail="Content not found")
+    removed = activities[activity_name]["content"].pop(content_idx)
+    return {"message": f"Content removed from {activity_name}", "content": removed}
