@@ -100,6 +100,15 @@ section h3 {
   justify-content: space-between;
 }
 
+/* Participant photo thumbnail */
+.participant-photo {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
 /* Remove the bullet point pseudo-element */
 .participants-section ul li::before {
   display: none;

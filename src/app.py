@@ -5,13 +5,14 @@ A super simple FastAPI application that allows students to view and sign up
 for extracurricular activities at Mergington High School.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
 from typing import Optional
 from fastapi import Body
+from uuid import uuid4
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -102,8 +103,12 @@ def get_activities():
 
 
 @app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
-    """Sign up a student for an activity"""
+async def signup_for_activity(
+    activity_name: str,
+    email: str = Form(...),
+    photo: Optional[UploadFile] = File(None),
+):
+    """Sign up a student for an activity, optionally uploading a photo."""
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
@@ -118,9 +123,42 @@ def signup_for_activity(activity_name: str, email: str):
             detail="Student is already signed up"
         )
 
+    photo_url = None
+    # If a photo was uploaded, validate and save it
+    if photo is not None:
+        # Basic content-type check
+        if not (photo.content_type and photo.content_type.startswith("image/")):
+            raise HTTPException(status_code=400, detail="Uploaded file must be an image")
+
+        # Ensure uploads directory exists inside static
+        uploads_dir = current_dir / "static" / "uploads"
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate unique filename while preserving extension
+        original_name = Path(photo.filename).name
+        ext = Path(original_name).suffix or ""
+        filename = f"{uuid4().hex}{ext}"
+        dest_path = uploads_dir / filename
+
+        # Save file contents
+        contents = await photo.read()
+        with open(dest_path, "wb") as f:
+            f.write(contents)
+
+        photo_url = f"/static/uploads/{filename}"
+
+        # Record the photo with the activity (non-persistent, in-memory)
+        if "photos" not in activity:
+            activity["photos"] = []
+        activity["photos"].append({"email": email, "photo_url": photo_url})
+
     # Add student
     activity["participants"].append(email)
-    return {"message": f"Signed up {email} for {activity_name}"}
+
+    resp = {"message": f"Signed up {email} for {activity_name}"}
+    if photo_url is not None:
+        resp["photo_url"] = photo_url
+    return resp
 
 
 @app.delete("/activities/{activity_name}/unregister")
