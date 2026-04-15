@@ -21,20 +21,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft =
           details.max_participants - details.participants.length;
 
-        // Create participants HTML with photo thumbnails if available
+        // Create participants HTML with delete icons instead of bullet points
         const participantsHTML =
           details.participants.length > 0
             ? `<div class="participants-section">
-          <h5>Participants:</h5>
-          <ul class="participants-list">
-            ${details.participants
-              .map(
-                (p) =>
-                  `<li>${p.photo_url ? `<img src="${p.photo_url}" alt="photo" class="participant-photo-thumb" /> ` : ""}<span class="participant-email">${p.email}</span><button class="delete-btn" data-activity="${name}" data-email="${p.email}">❌</button></li>`
-              )
-              .join("")}
-          </ul>
-        </div>`
+              <h5>Participants:</h5>
+              <ul class="participants-list">
+                ${details.participants
+                  .map(
+                    (email) =>
+                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>`
             : `<p><em>No participants yet</em></p>`;
 
         activityCard.innerHTML = `
@@ -116,26 +116,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const email = document.getElementById("email").value;
     const activity = document.getElementById("activity").value;
-    const photoInput = document.getElementById("photo");
-    const photoFile = photoInput.files[0];
-
-    if (!photoFile) {
-      messageDiv.textContent = "Please select a photo.";
-      messageDiv.className = "error";
-      messageDiv.classList.remove("hidden");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("email", email);
-    formData.append("photo", photoFile);
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(activity)}/signup`,
+        `/activities/${encodeURIComponent(
+          activity
+        )}/signup?email=${encodeURIComponent(email)}`,
         {
           method: "POST",
-          body: formData,
         }
       );
 
